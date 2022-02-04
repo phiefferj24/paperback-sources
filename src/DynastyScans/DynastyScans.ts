@@ -12,8 +12,12 @@ import {
 import {Parser} from './Parser'
 
 const WEBSITE_URL = "https://dynasty-scans.com"
+export const baseURL = WEBSITE_URL
+export const GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources"
 
 export class DynastyScans extends Source {
+    baseURL = WEBSITE_URL
+    GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources"
     parser = new Parser()
     requestManager = createRequestManager({
         requestsPerSecond: 10,
@@ -51,7 +55,7 @@ export class DynastyScans extends Source {
         let data = await this.requestManager.schedule(request, 1)
         let $ = this.cheerio.load(data.data)
         return createPagedResults({
-            results: await this.parser.getSearchResults($, this.requestManager)
+            results: await this.parser.getSearchResults($, this.requestManager, metadata)
         })
     }
 }
@@ -61,11 +65,9 @@ export const DynastyScansInfo: SourceInfo = {
     name: 'Dynasty Scans',
     icon: 'icon.jpg',
     author: 'JimIsWayTooEpic',
-    authorWebsite: 'https://jimphieffer.com',
+    authorWebsite: 'https://jimphieffer.com/paperback/',
     description: 'Source for Dynasty Scans, a (generally) yuri/yaoi source. Created by JimIsWayTooEpic.',
     contentRating: ContentRating.MATURE,
-    websiteBaseURL: 'https://dynasty-scans.com',
+    websiteBaseURL: WEBSITE_URL,
     language: "English"
 }
-
-export const GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources"

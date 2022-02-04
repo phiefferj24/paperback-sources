@@ -1,18 +1,15 @@
 {
-  "name": "extensions-official",
+  "name": "extensions-jimiswaytooepic",
+  "repositoryName": "JimIsWayTooEpic's Extensions",
   "version": "1.0.0",
-  "description": "Community maintained Paperback extension repository",
+  "description": "JimIsWayTooEpic's sources for Paperback",
   "main": "index.js",
   "scripts": {
     "bundle": "paperback bundle",
     "serve": "paperback serve",
     "eslint": "eslint src"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Paperback-iOS/extensions-official.git"
-  },
-  "author": "Paperback Community",
+  "author": "JimIsWayTooEpic",
   "license": "GPL-3.0-or-later",
   "bugs": {
     "url": "https://github.com/Paperback-iOS/extensions-official/issues"
@@ -29,7 +26,6 @@
   "dependencies": {
     "node-gyp": "^8.4.1",
     "node-pre-gyp": "^0.17.0",
-    "paperback": "^0.5.0",
     "paperback-cli": "file:../paperback-cli-1.4.0",
     "paperback-extensions-common": "^4.2.0"
   }

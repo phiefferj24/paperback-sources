@@ -387,13 +387,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GITHUB_REPOSITORY = exports.DynastyScansInfo = exports.DynastyScans = void 0;
+exports.DynastyScansInfo = exports.DynastyScans = exports.GITHUB_REPOSITORY = exports.baseURL = void 0;
 const paperback_extensions_common_1 = require("paperback-extensions-common");
 const Parser_1 = require("./Parser");
 const WEBSITE_URL = "https://dynasty-scans.com";
+exports.baseURL = WEBSITE_URL;
+exports.GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources";
 class DynastyScans extends paperback_extensions_common_1.Source {
     constructor() {
         super(...arguments);
+        this.baseURL = WEBSITE_URL;
+        this.GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources";
         this.parser = new Parser_1.Parser();
         this.requestManager = createRequestManager({
             requestsPerSecond: 10,
@@ -439,7 +443,7 @@ class DynastyScans extends paperback_extensions_common_1.Source {
             let data = yield this.requestManager.schedule(request, 1);
             let $ = this.cheerio.load(data.data);
             return createPagedResults({
-                results: yield this.parser.getSearchResults($, this.requestManager)
+                results: yield this.parser.getSearchResults($, this.requestManager, metadata)
             });
         });
     }
@@ -450,13 +454,12 @@ exports.DynastyScansInfo = {
     name: 'Dynasty Scans',
     icon: 'icon.jpg',
     author: 'JimIsWayTooEpic',
-    authorWebsite: 'https://jimphieffer.com',
+    authorWebsite: 'https://jimphieffer.com/paperback/',
     description: 'Source for Dynasty Scans, a (generally) yuri/yaoi source. Created by JimIsWayTooEpic.',
     contentRating: paperback_extensions_common_1.ContentRating.MATURE,
-    websiteBaseURL: 'https://dynasty-scans.com',
+    websiteBaseURL: WEBSITE_URL,
     language: "English"
 };
-exports.GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources";
 
 },{"./Parser":49,"paperback-extensions-common":5}],49:[function(require,module,exports){
 "use strict";
@@ -550,7 +553,7 @@ class Parser {
             longStrip: longStrip
         });
     }
-    getSearchResults($, requestManager) {
+    getSearchResults($, requestManager, _metadata) {
         return __awaiter(this, void 0, void 0, function* () {
             let mangaTiles = [];
             let chapters = $("dl.chapter-list dd");

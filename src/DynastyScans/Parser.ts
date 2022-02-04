@@ -87,7 +87,7 @@ export class Parser {
                 longStrip: longStrip
             })
     }
-    async getSearchResults($: any, requestManager: RequestManager): Promise<MangaTile[]> {
+    async getSearchResults($: any, requestManager: RequestManager, _metadata: any): Promise<MangaTile[]> {
         let mangaTiles: MangaTile[] = []
         let chapters = $("dl.chapter-list dd")
         await chapters.foreach(async (chapter: any) => {
