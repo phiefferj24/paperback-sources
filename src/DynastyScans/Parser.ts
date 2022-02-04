@@ -2,13 +2,10 @@ import {
     Manga,
     Chapter,
     ChapterDetails,
-    PagedResults,
     MangaStatus,
     Tag,
-    TagType,
     LanguageCode,
     RequestManager,
-    SearchRequest,
     MangaTile
 } from 'paperback-extensions-common'
 
