@@ -188,7 +188,7 @@ __exportStar(require("./WebViewButton"), exports);
 __exportStar(require("./FormRow"), exports);
 __exportStar(require("./Stepper"), exports);
 
-},{"./Button":9,"./Form":11,"./FormRow":10,"./Header":12,"./InputField":13,"./Label":14,"./Link":15,"./MultilineLabel":16,"./NavigationButton":17,"./OAuthButton":18,"./Section":19,"./Select":20,"./Stepper":21,"./Switch":22,"./WebViewButton":23}],25:[function(require,module,exports){
+},{"./Button":9,"./Form":10,"./FormRow":11,"./Header":12,"./InputField":13,"./Label":14,"./Link":15,"./MultilineLabel":16,"./NavigationButton":17,"./OAuthButton":18,"./Section":19,"./Select":20,"./Stepper":21,"./Switch":22,"./WebViewButton":23}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HomeSectionType = void 0;
@@ -249,10 +249,6 @@ var LanguageCode;
 })(LanguageCode = exports.LanguageCode || (exports.LanguageCode = {}));
 
 },{}],27:[function(require,module,exports){
-arguments[4][6][0].apply(exports,arguments)
-},{"dup":6}],28:[function(require,module,exports){
-arguments[4][6][0].apply(exports,arguments)
-},{"dup":6}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MangaStatus = void 0;
@@ -265,7 +261,11 @@ var MangaStatus;
     MangaStatus[MangaStatus["HIATUS"] = 4] = "HIATUS";
 })(MangaStatus = exports.MangaStatus || (exports.MangaStatus = {}));
 
-},{}],30:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
+arguments[4][6][0].apply(exports,arguments)
+},{"dup":6}],29:[function(require,module,exports){
+arguments[4][6][0].apply(exports,arguments)
+},{"dup":6}],30:[function(require,module,exports){
 arguments[4][6][0].apply(exports,arguments)
 },{"dup":6}],31:[function(require,module,exports){
 arguments[4][6][0].apply(exports,arguments)
@@ -375,7 +375,7 @@ __exportStar(require("./TrackerActionQueue"), exports);
 __exportStar(require("./SearchField"), exports);
 __exportStar(require("./RawData"), exports);
 
-},{"./Chapter":7,"./ChapterDetails":6,"./Constants":8,"./DynamicUI":24,"./HomeSection":25,"./Languages":26,"./Manga":29,"./MangaTile":27,"./MangaUpdate":28,"./PagedResults":30,"./RawData":31,"./RequestHeaders":32,"./RequestInterceptor":33,"./RequestManager":34,"./RequestObject":35,"./ResponseObject":36,"./SearchField":37,"./SearchRequest":38,"./SourceInfo":39,"./SourceManga":40,"./SourceStateManager":41,"./SourceTag":42,"./TagSection":43,"./TrackedManga":45,"./TrackedMangaChapterReadAction":44,"./TrackerActionQueue":46}],48:[function(require,module,exports){
+},{"./Chapter":6,"./ChapterDetails":7,"./Constants":8,"./DynamicUI":24,"./HomeSection":25,"./Languages":26,"./Manga":27,"./MangaTile":28,"./MangaUpdate":29,"./PagedResults":30,"./RawData":31,"./RequestHeaders":32,"./RequestInterceptor":33,"./RequestManager":34,"./RequestObject":35,"./ResponseObject":36,"./SearchField":37,"./SearchRequest":38,"./SourceInfo":39,"./SourceManga":40,"./SourceStateManager":41,"./SourceTag":42,"./TagSection":43,"./TrackedManga":44,"./TrackedMangaChapterReadAction":45,"./TrackerActionQueue":46}],48:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -387,41 +387,113 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DynastyScansInfo = exports.DynastyScans = exports.GITHUB_REPOSITORY = exports.baseURL = void 0;
+exports.DynastyScansInfo = exports.DynastyScans = void 0;
 const paperback_extensions_common_1 = require("paperback-extensions-common");
-const Parser_1 = require("./Parser");
 const WEBSITE_URL = "https://dynasty-scans.com";
-exports.baseURL = WEBSITE_URL;
-exports.GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources";
+const AMT_IN_HOMEPAGE = 10;
+const AMT_PER_VIEW_MORE_CALL = 10;
 class DynastyScans extends paperback_extensions_common_1.Source {
     constructor() {
         super(...arguments);
         this.baseURL = WEBSITE_URL;
         this.GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources";
-        this.parser = new Parser_1.Parser();
         this.requestManager = createRequestManager({
             requestsPerSecond: 10,
-            requestTimeout: 10000
+            requestTimeout: 5000
         });
     }
     getMangaDetails(mangaId) {
         return __awaiter(this, void 0, void 0, function* () {
             let request = createRequestObject({
-                url: `${WEBSITE_URL}/series/${mangaId}.json`,
+                url: `${WEBSITE_URL}/${mangaId}.json`,
                 method: 'GET'
             });
-            let data = yield this.requestManager.schedule(request, 1);
-            return this.parser.getMangaDetails(data.data, mangaId);
+            let data = (yield this.requestManager.schedule(request, 3)).data;
+            const json = JSON.parse(data);
+            var status = paperback_extensions_common_1.MangaStatus.UNKNOWN;
+            const tags = json.tags;
+            const chapters = json.taggings;
+            const tagList = [];
+            const $ = this.cheerio.load(`<div>${json.description}</div>`);
+            const description = $('div').text();
+            var author = undefined;
+            for (let index in tags) {
+                let tag = tags[index];
+                if (tag.type === "General")
+                    tagList.push(createTag({
+                        id: tag.permalink,
+                        label: tag.name
+                    }));
+                else if (tag.type === "Status") {
+                    if (tag.name === "Ongoing") {
+                        status = paperback_extensions_common_1.MangaStatus.ONGOING;
+                    }
+                }
+                else if (tag.type === "Author") {
+                    author = tag.name;
+                }
+            }
+            var lastUpdated = undefined;
+            for (let index in chapters) {
+                let chapter = chapters[index];
+                if (chapter.hasOwnProperty('released_on')) {
+                    lastUpdated = new Date(chapter.released_on);
+                }
+            }
+            return createManga({
+                id: mangaId,
+                titles: [json.name],
+                image: `${WEBSITE_URL}${json.cover}`,
+                status: status,
+                desc: description,
+                tags: [createTagSection({
+                        id: 'genres',
+                        label: 'Genres',
+                        tags: tagList
+                    })],
+                lastUpdate: lastUpdated,
+                author: author,
+            });
         });
     }
     getChapters(mangaId) {
         return __awaiter(this, void 0, void 0, function* () {
             let request = createRequestObject({
-                url: `${WEBSITE_URL}/series/${mangaId}.json`,
+                url: `${WEBSITE_URL}/${mangaId}.json`,
                 method: 'GET'
             });
-            let data = yield this.requestManager.schedule(request, 1);
-            return this.parser.getChapters(data.data, mangaId);
+            let data = (yield this.requestManager.schedule(request, 3)).data;
+            const json = JSON.parse(data);
+            var chapterList = [];
+            const chapters = json.taggings;
+            var chapterIterator = 1;
+            for (let index in chapters) {
+                let chapter = chapters[index];
+                if (chapter.hasOwnProperty('title')) {
+                    let lastUpdated = new Date(chapter.released_on);
+                    var group = undefined;
+                    for (let index2 in chapter.tags) {
+                        let tag = chapter.tags[index2];
+                        if (tag.type === "Scanlator") {
+                            group = tag.name;
+                        }
+                    }
+                    let title = chapter.title;
+                    let permalink = String(chapter.permalink);
+                    let chapterNumber = Number(permalink.substring(permalink.lastIndexOf("ch") + 2).replace("_", "."));
+                    chapterList.push(createChapter({
+                        id: permalink,
+                        mangaId: mangaId,
+                        chapNum: Number.isNaN(chapterNumber) ? chapterIterator : chapterNumber,
+                        langCode: paperback_extensions_common_1.LanguageCode.ENGLISH,
+                        name: title,
+                        time: lastUpdated,
+                        group: group
+                    }));
+                }
+                chapterIterator++;
+            }
+            return chapterList;
         });
     }
     getChapterDetails(mangaId, chapterId) {
@@ -430,20 +502,204 @@ class DynastyScans extends paperback_extensions_common_1.Source {
                 url: `${WEBSITE_URL}/chapters/${chapterId}.json`,
                 method: 'GET'
             });
-            let data = yield this.requestManager.schedule(request, 1);
-            return this.parser.getChapterDetails(data.data, mangaId, chapterId);
+            let data = (yield this.requestManager.schedule(request, 3)).data;
+            const json = JSON.parse(data);
+            let pages = [];
+            var longStrip = false;
+            const tags = json.tags;
+            for (let index in tags) {
+                let tag = tags[index];
+                if (tag.permalink === "long_strip") {
+                    longStrip = true;
+                }
+            }
+            const jsonpages = json.pages;
+            for (let index in jsonpages) {
+                pages.push(`${WEBSITE_URL}${jsonpages[index].url}`);
+            }
+            return createChapterDetails({
+                id: chapterId,
+                mangaId: mangaId,
+                pages: pages,
+                longStrip: longStrip
+            });
         });
     }
     getSearchResults(query, metadata) {
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
+            let page = (_a = metadata === null || metadata === void 0 ? void 0 : metadata.page) !== null && _a !== void 0 ? _a : 1;
+            let search = encodeURIComponent((_b = query.title) !== null && _b !== void 0 ? _b : "");
             let request = createRequestObject({
-                url: `https://dynasty-scans.com/search?q=${query.title}&classes%5B%5D=Series&classes%5B%5D=Author&classes%5B%5D=Scanlator&classes%5B%5D=General`,
+                url: `https://dynasty-scans.com/search?q=${search}&classes%5B%5D=Anthology&classes%5B%5D=Doujin&classes%5B%5D=Issue&classes%5B%5D=Series&classes%5B%5D=Author&classes%5B%5D=Scanlator&classes%5B%5D=General&sort=&page=${page}`,
                 method: 'GET'
             });
-            let data = yield this.requestManager.schedule(request, 1);
+            let data = yield this.requestManager.schedule(request, 3);
             let $ = this.cheerio.load(data.data);
+            let mangaTiles = [];
+            let mangas = $("dl.chapter-list dd").toArray();
+            for (let index in mangas) {
+                let chapter = mangas[index];
+                const permalink = $("a.name", chapter).attr("href").toString().substring(1);
+                const type = permalink.substring(0, permalink.indexOf("/"));
+                if (type !== "series" && type !== "doujins") {
+                    continue;
+                }
+                const title = `${$("a.name", chapter).text()} (${type === "series" ? "Series" : "Doujin"})`;
+                const request = createRequestObject({
+                    url: `${WEBSITE_URL}/${permalink}.json`,
+                    method: 'GET'
+                });
+                const data = yield this.requestManager.schedule(request, 3);
+                const json = JSON.parse(data.data);
+                mangaTiles.push(createMangaTile({
+                    id: permalink,
+                    title: createIconText({
+                        text: title
+                    }),
+                    image: `${WEBSITE_URL}${json.cover}`
+                }));
+            }
+            const navItems = $("div.pagination ul li").toArray();
+            var lastPageNum = 1;
+            for (let index in navItems) {
+                let navItem = navItems[index];
+                let possibleNumber = Number($("a", navItem).text());
+                if (!Number.isNaN(possibleNumber)) {
+                    lastPageNum = possibleNumber;
+                }
+            }
+            let newMetadata;
+            if (lastPageNum === page) {
+                newMetadata = undefined;
+            }
+            else {
+                newMetadata = { page: (page + 1) };
+            }
             return createPagedResults({
-                results: yield this.parser.getSearchResults($, this.requestManager, metadata)
+                results: mangaTiles,
+                metadata: newMetadata
+            });
+        });
+    }
+    getHomePageSections(sectionCallback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let request = createRequestObject({
+                url: `${WEBSITE_URL}/chapters/added.json`,
+                method: 'GET',
+            });
+            let data = (yield this.requestManager.schedule(request, 3)).data;
+            let section = createHomeSection({
+                id: 'recently_updated',
+                title: 'Recently Updated Mangas',
+                view_more: true,
+            });
+            sectionCallback(section);
+            let tiles = [];
+            let addedManga = [];
+            let json = JSON.parse(data);
+            var offset = 0;
+            for (var i = 0; i < AMT_IN_HOMEPAGE + offset; i++) {
+                let chapter = json.chapters[i];
+                if (chapter === null) {
+                    break;
+                }
+                let id = undefined;
+                let name = undefined;
+                for (let tag of chapter.tags) {
+                    if (tag.type === "Series") {
+                        id = tag.permalink;
+                        name = tag.name;
+                    }
+                }
+                if (id === undefined || name === undefined || addedManga.includes(id)) {
+                    offset++;
+                    continue;
+                }
+                let request2 = createRequestObject({
+                    url: `${WEBSITE_URL}/series/${id}.json`,
+                    method: 'GET',
+                });
+                let data2 = (yield this.requestManager.schedule(request2, 1)).data;
+                let json2 = JSON.parse(data2);
+                tiles.push(createMangaTile({
+                    id: `series/${id}`,
+                    title: createIconText({ text: name }),
+                    image: `${WEBSITE_URL}${json2.cover}`
+                }));
+                addedManga.push(id);
+            }
+            section.items = tiles;
+            sectionCallback(section);
+        });
+    }
+    getMangaShareUrl(mangaId) {
+        return `${WEBSITE_URL}/${mangaId}`;
+    }
+    getViewMoreItems(homepageSectionId, metadata) {
+        var _a, _b;
+        return __awaiter(this, void 0, void 0, function* () {
+            let page = (_a = metadata === null || metadata === void 0 ? void 0 : metadata.page) !== null && _a !== void 0 ? _a : 1;
+            let request = createRequestObject({
+                url: `${WEBSITE_URL}/chapters/added.json?page=${page}`,
+                method: 'GET',
+            });
+            let data = (yield this.requestManager.schedule(request, 3)).data;
+            let json = JSON.parse(data);
+            var newPageNeeded = false;
+            var lastPageNum = Number.isNaN(Number(json.total_pages)) ? 1 : Number(json.total_pages);
+            var offset = 0;
+            let at = (_b = metadata === null || metadata === void 0 ? void 0 : metadata.at) !== null && _b !== void 0 ? _b : 0;
+            let tiles = [];
+            let addedManga = [];
+            for (var i = at; i < AMT_PER_VIEW_MORE_CALL + offset + at; i++) {
+                if (i >= json.chapters.length) {
+                    newPageNeeded = true;
+                    break;
+                }
+                let chapter = json.chapters[i];
+                let id = undefined;
+                let name = undefined;
+                if (chapter === undefined || !chapter.hasOwnProperty('tags')) {
+                    offset++;
+                    continue;
+                }
+                for (let tag of chapter.tags) {
+                    if (tag.type === "Series") {
+                        id = tag.permalink;
+                        name = tag.name;
+                    }
+                }
+                if (id === undefined || name === undefined || addedManga.includes(id)) {
+                    offset++;
+                    continue;
+                }
+                let request2 = createRequestObject({
+                    url: `${WEBSITE_URL}/series/${id}.json`,
+                    method: 'GET',
+                });
+                let data2 = (yield this.requestManager.schedule(request2, 1)).data;
+                let json2 = JSON.parse(data2);
+                tiles.push(createMangaTile({
+                    id: `series/${id}`,
+                    title: createIconText({ text: name }),
+                    image: `${WEBSITE_URL}${json2.cover}`
+                }));
+                addedManga.push(id);
+            }
+            let newMetadata;
+            if (lastPageNum === page && newPageNeeded) {
+                newMetadata = undefined;
+            }
+            else {
+                if (newPageNeeded)
+                    newMetadata = { page: (page + 1), at: 0 };
+                else
+                    newMetadata = { page: page, at: at + offset + AMT_PER_VIEW_MORE_CALL };
+            }
+            return createPagedResults({
+                results: tiles,
+                metadata: newMetadata
             });
         });
     }
@@ -455,129 +711,11 @@ exports.DynastyScansInfo = {
     icon: 'icon.jpg',
     author: 'JimIsWayTooEpic',
     authorWebsite: 'https://jimphieffer.com/paperback/',
-    description: 'Source for Dynasty Scans, a (generally) yuri/yaoi source. Created by JimIsWayTooEpic.',
-    contentRating: paperback_extensions_common_1.ContentRating.MATURE,
+    description: 'Source for Dynasty Scans. Created by JimIsWayTooEpic.',
+    contentRating: paperback_extensions_common_1.ContentRating.ADULT,
     websiteBaseURL: WEBSITE_URL,
     language: "English"
 };
-
-},{"./Parser":49,"paperback-extensions-common":5}],49:[function(require,module,exports){
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Parser = void 0;
-const paperback_extensions_common_1 = require("paperback-extensions-common");
-const WEBSITE_URL = "https://dynasty-scans.com";
-class Parser {
-    getMangaDetails(jsonRecieved, mangaId) {
-        const json = JSON.parse(jsonRecieved);
-        var status = paperback_extensions_common_1.MangaStatus.UNKNOWN;
-        const tags = json.tags;
-        const chapters = json.taggings;
-        const tagList = [];
-        tags.foreach((tag) => {
-            if (tag.type === "General")
-                tagList.push(createTag({
-                    id: tag.permalink,
-                    label: tag.name
-                }));
-            else if (tag.type === "Status") {
-                if (tag.name === "Ongoing") {
-                    status = paperback_extensions_common_1.MangaStatus.ONGOING;
-                }
-            }
-        });
-        var lastUpdated = undefined;
-        chapters.foreach((chapter) => {
-            if (chapter.hasOwnProperty('released_on')) {
-                lastUpdated = new Date(chapter.released_on);
-            }
-        });
-        return createManga({
-            id: mangaId,
-            titles: [json.title],
-            image: `${WEBSITE_URL}${json.cover}`,
-            status: status,
-            desc: json.description,
-            tags: [createTagSection({
-                    id: 'genres',
-                    label: 'Genres',
-                    tags: tagList
-                })],
-            lastUpdate: lastUpdated
-        });
-    }
-    getChapters(jsonRecieved, mangaId) {
-        const json = JSON.parse(jsonRecieved);
-        var chapterList = [];
-        json.taggings.foreach((chapter) => {
-            if (chapter.hasOwnProperty('title')) {
-                let title = chapter.title;
-                let permalink = String(chapter.permalink);
-                let chapterNumber = Number(permalink.substring(permalink.lastIndexOf("ch")) + 2);
-                chapterList.push(createChapter({
-                    id: permalink,
-                    mangaId: mangaId,
-                    chapNum: Number.isNaN(chapterNumber) ? 0 : chapterNumber,
-                    langCode: paperback_extensions_common_1.LanguageCode.ENGLISH,
-                    name: title
-                }));
-            }
-        });
-        return chapterList;
-    }
-    getChapterDetails(jsonRecieved, mangaId, chapterId) {
-        const json = JSON.parse(jsonRecieved);
-        let pages = [];
-        let longStrip = false;
-        json.tags.foreach((tag) => {
-            if (tag.permalink === "long_strip") {
-                longStrip = true;
-            }
-        });
-        json.pages.foreach((page) => {
-            pages.push(`${WEBSITE_URL}${page.url}`);
-        });
-        return createChapterDetails({
-            id: chapterId,
-            mangaId: mangaId,
-            pages: pages,
-            longStrip: longStrip
-        });
-    }
-    getSearchResults($, requestManager, _metadata) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let mangaTiles = [];
-            let chapters = $("dl.chapter-list dd");
-            yield chapters.foreach((chapter) => __awaiter(this, void 0, void 0, function* () {
-                const permalink = $("a.name", chapter).attr("href");
-                const request = createRequestObject({
-                    url: `${WEBSITE_URL}${permalink}.json`,
-                    method: 'GET'
-                });
-                const data = yield requestManager.schedule(request, 1);
-                const json = JSON.parse(data.data);
-                mangaTiles.push(createMangaTile({
-                    id: permalink.substring(permalink.lastIndexOf("/") + 1),
-                    title: createIconText({
-                        text: $("a.name", chapter).text()
-                    }),
-                    image: `${WEBSITE_URL}${json.cover}`
-                }));
-            }));
-            return mangaTiles;
-        });
-    }
-}
-exports.Parser = Parser;
 
 },{"paperback-extensions-common":5}]},{},[48])(48)
 });
