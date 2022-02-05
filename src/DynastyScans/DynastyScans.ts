@@ -197,50 +197,56 @@ export class DynastyScans extends Source {
     }
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         let request = createRequestObject({
-            url: `${WEBSITE_URL}/chapters/added.json`,
+            url: `${WEBSITE_URL}/`,
             method: 'GET',
         })
         let data = (await this.requestManager.schedule(request, 3)).data
+
         let section = createHomeSection({
             id: 'recently_updated',
             title: 'Recently Updated Mangas',
             view_more: true,
-        })
+        });
+
+        // load the page and get the list of recent updates
+        const $ = this.cheerio.load(data)
+
+
         sectionCallback(section)
         let tiles: MangaTile[] = []
-        let addedManga: string[] = []
-        let json = JSON.parse(data)
-        var offset = 0
-        for(var i = 0; i < AMT_IN_HOMEPAGE + offset; i++) {
-            let chapter = json.chapters[i]
-            if(chapter === null) {
-                break
-            }
-            let id: string | undefined = undefined
-            let name: string | undefined = undefined
-            for(let tag of chapter.tags) {
-                if(tag.type === "Series") {
-                    id = tag.permalink
-                    name = tag.name
-                }
-            }
-            if(id === undefined || name === undefined || addedManga.includes(id)) {
-                offset++
-                continue
-            }
-            let request2 = createRequestObject({
-                url: `${WEBSITE_URL}/series/${id}.json`,
-                method: 'GET',
-            })
-            let data2 = (await this.requestManager.schedule(request2, 1)).data
-            let json2 = JSON.parse(data2)
+
+        const recentManga = $(".chapter").get();
+        let current = 0
+        for (let index = 0; index < recentManga.length; index++) {
+            if ( AMT_IN_HOMEPAGE <= current ) break;
+            const chapter = recentManga[index.toString()];
+
+            // get permalink
+            const permalink = chapter.attribs.href.replace(/_ch(\d*_\d{1,}|\d*)$/gm,"").replace("/chapters/","");
+
+            // get sub image src
+            const image = $("img", chapter).attr("src");
+
+            // check if element exists 
+            const isDojins = $(".doujins", chapter).text() != "";
+
+            // if dojins we skip it. ¯\_(ツ)_/¯
+            if (isDojins) continue;
+
+            // get title , trim it remove chXX from title example:
+            // "One Piece ch1" -> "One Piece", 
+            // "Kyou Kara Mirai ch13.5: How Miku Deals With Jealousy" -> "Kyou Kara Mirai"
+            const title = $(".title", chapter).text().trim().replace(/\ ch(\d{1,}.*)/g,""); 
+
+            current++;
             tiles.push(createMangaTile({
-                id: `series/${id}`,
-                title: createIconText({text: name}),
-                image: `${WEBSITE_URL}${json2.cover}`
+                id: `series/${permalink}`,
+                title: createIconText({text: title}),
+                image: `${WEBSITE_URL}${image}`
             }))
-            addedManga.push(id)
+            
         }
+        
         section.items = tiles
         sectionCallback(section)
     }
