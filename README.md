@@ -1,4 +1,4 @@
 <h1>JimIsWayTooEpic's Paperback Extensions</h1>
-Paperback extensions made by `JimIsWayTooEpic#0001` on Discord.
-<br>Includes: `Dynasty Scans`
-<br>Base URL: `https://jimphieffer.com/paperback/`
+Paperback extensions made by <strong>JimIsWayTooEpic#0001</strong> on Discord.
+<br>Includes: <strong>Dynasty Scans</strong>
+<br>Base URL: <strong>https://jimphieffer.com/paperback/</strong>
