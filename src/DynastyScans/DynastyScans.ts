@@ -24,11 +24,11 @@ export class DynastyScans extends Source {
     GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources"
     requestManager = createRequestManager({
         requestsPerSecond: 5,
-        requestTimeout: 15000
+        requestTimeout: 20000
     })
     postRequestManager = createRequestManager({
-        requestsPerSecond: 5,
-        requestTimeout: 5000
+        requestsPerSecond: 1,
+        requestTimeout: 15000
     })
     async getMangaDetails(mangaId: string): Promise<Manga> {
         let request = createRequestObject({
