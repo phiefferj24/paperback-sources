@@ -13,17 +13,22 @@ import {
     SourceInfo,
     Tag,
     Response,
+    TagSection,
 } from 'paperback-extensions-common'
 
 const WEBSITE_URL = "https://dynasty-scans.com"
-const AMT_IN_HOMEPAGE = 10
 const REQUEST_RETRIES = 1
+const POST_REQUEST_RETRIES = 3
 export class DynastyScans extends Source {
     baseURL = WEBSITE_URL
     GITHUB_REPOSITORY = "https://github.com/phiefferj24/paperback-sources"
     requestManager = createRequestManager({
         requestsPerSecond: 5,
         requestTimeout: 15000
+    })
+    postRequestManager = createRequestManager({
+        requestsPerSecond: 5,
+        requestTimeout: 5000
     })
     async getMangaDetails(mangaId: string): Promise<Manga> {
         let request = createRequestObject({
@@ -39,8 +44,7 @@ export class DynastyScans extends Source {
         const $ = this.cheerio.load(`<div>${json.description}</div>`)
         const description = $('div').text()
         let author: string | undefined = undefined
-        for(let index in tags) {
-            let tag = tags[index]
+        for(let tag of tags) {
             if(tag.type === "General") tagList.push(createTag({
                 id: tag.permalink,
                 label: tag.name
@@ -55,8 +59,7 @@ export class DynastyScans extends Source {
             }
         }
         let lastUpdated: Date | undefined = undefined
-        for(let index in chapters) {
-            let chapter = chapters[index]
+        for(let chapter of chapters) {
             if(chapter.hasOwnProperty('released_on')) {
                 lastUpdated = new Date(chapter.released_on)
             }
@@ -66,7 +69,7 @@ export class DynastyScans extends Source {
             titles: [json.name],
             image: `${WEBSITE_URL}${json.cover}`,
             status: status,
-            desc: description,
+            desc: description === "null" ? undefined : description,
             tags: [createTagSection({
                 id: 'genres',
                 label: 'Genres',
@@ -86,13 +89,11 @@ export class DynastyScans extends Source {
         let chapterList: Chapter[] = []
         const chapters = json.taggings
         let chapterIterator = 1
-        for(let index in chapters) {
-            let chapter = chapters[index]
+        for(let chapter of chapters) {
             if(chapter.hasOwnProperty('title')) {
                 let lastUpdated = new Date(chapter.released_on)
                 let group: string | undefined = undefined
-                for(let index2 in chapter.tags) {
-                    let tag = chapter.tags[index2]
+                for(let tag of chapter.tags) {
                     if(tag.type === "Scanlator") {
                         group = tag.name
                     }
@@ -124,15 +125,14 @@ export class DynastyScans extends Source {
         let pages: string[] = []
         let longStrip: boolean = false
         const tags = json.tags
-        for(let index in tags) {
-            let tag = tags[index]
+        for(let tag of tags) {
             if(tag.permalink === "long_strip") {
                 longStrip = true
             }
         }
         const jsonpages = json.pages
-        for(let index in jsonpages) {
-            pages.push(`${WEBSITE_URL}${jsonpages[index].url}`)
+        for(let jsonpage of jsonpages) {
+            pages.push(`${WEBSITE_URL}${jsonpage.url}`)
         }
         return createChapterDetails({
             id: chapterId,
@@ -141,11 +141,32 @@ export class DynastyScans extends Source {
             longStrip: longStrip
         })
     }
+    override async supportsTagExclusion(): Promise<boolean> {
+        return true
+    }
     async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         let page: number = metadata?.page ?? 1
-        let search = encodeURIComponent(query.title ?? "")
+        let search = encodeURIComponent(query.title ?? " ")
+        let tagId = metadata?.tagId ?? undefined
+        const includedTags = query.includedTags
+        if(includedTags !== undefined && tagId === undefined && includedTags[0] !== undefined) {
+            const request2 = createRequestObject({
+                url: `${WEBSITE_URL}/tags/suggest?query=${encodeURIComponent(includedTags[0]!.label)}`,
+                method: 'POST'
+            })
+            let data2 = (await this.postRequestManager.schedule(request2, POST_REQUEST_RETRIES).catch((err) => {}))?.data ?? undefined
+            if(data2 !== undefined) {
+                let json2 = JSON.parse(data2)
+                for(let tag of json2) {
+                    if(tag.type === "General") {
+                        tagId = tag.id
+                        break
+                    }
+                }
+            }
+        }
         let request = createRequestObject({
-            url: `https://dynasty-scans.com/search?q=${search}&classes%5B%5D=Anthology&classes%5B%5D=Doujin&classes%5B%5D=Issue&classes%5B%5D=Series&classes%5B%5D=Author&classes%5B%5D=Scanlator&classes%5B%5D=General&sort=&page=${page}`,
+            url: `${WEBSITE_URL}/search?q=${search}&classes%5B%5D=Doujin&classes%5B%5D=Series&with%5B%5D=${tagId === undefined ? "" : `&with%5B%5D=${tagId}`}&page=${page}&sort=`,
             method: 'GET'
         })
         let data = await this.requestManager.schedule(request, 3)
@@ -153,8 +174,7 @@ export class DynastyScans extends Source {
         let mangaTiles: MangaTile[] = []
         let mangas = $("dl.chapter-list dd").toArray()
         let chapterJSONPromises = []
-        for(let index in mangas) {
-            let chapter = mangas[index]
+        for(let chapter of mangas) {
             const permalink = $("a.name", chapter).attr("href").toString().substring(1)
             const type = permalink.substring(0, permalink.indexOf("/"))
             if(type !== "series" && type !== "doujins") {
@@ -170,18 +190,21 @@ export class DynastyScans extends Source {
         for(let chapterJSON of chapterJSONs) {
             const json = JSON.parse(chapterJSON.data)
             const permalink = chapterJSON.request.url.substring(WEBSITE_URL.length + 1, chapterJSON.request.url.length - 5)
+            let latestChapter = (json.taggings[json.taggings.length-1] && json.taggings[json.taggings.length-1].hasOwnProperty('title')) ? json.taggings[json.taggings.length-1].title : ""
             mangaTiles.push(createMangaTile({
                 id: permalink,
                 title: createIconText({
                     text: json.name
                 }),
-                image: `${WEBSITE_URL}${json.cover}`
+                image: `${WEBSITE_URL}${json.cover}`,
+                subtitleText: createIconText({
+                    text: latestChapter
+                })
             }))
         }
         const navItems = $("div.pagination ul li").toArray()
         let lastPageNum = 1
-        for(let index in navItems) {
-            let navItem = navItems[index]
+        for(let navItem of navItems) {
             let possibleNumber = Number($("a", navItem).text())
             if(!Number.isNaN(possibleNumber)) {
                 lastPageNum = possibleNumber
@@ -192,7 +215,7 @@ export class DynastyScans extends Source {
             newMetadata = undefined
         }
         else {
-            newMetadata = {page: (page + 1)}
+            newMetadata = {page: (page + 1), tagId: tagId}
         }
         return createPagedResults({
             results: mangaTiles,
@@ -221,11 +244,8 @@ export class DynastyScans extends Source {
                 }
             }
             const seriesJSONPromises: Promise<Response>[] = []
-            let offset = 0
-            for(var i = 0; i < AMT_IN_HOMEPAGE + offset; i++) {
-                if(i >= chapters.length) break
+            for(let chapter of chapters) {
                 let id: string | undefined = undefined
-                const chapter = chapters[i]
                 for(let tag of chapter.tags) {
                     if(tag.type === "Series") {
                         id = tag.permalink
@@ -238,18 +258,17 @@ export class DynastyScans extends Source {
                     })
                     seriesJSONPromises.push(this.requestManager.schedule(request2, REQUEST_RETRIES))
                 }
-                else {
-                    offset++
-                }
             }
             const seriesJSONs: Response[] = await Promise.all(seriesJSONPromises)
             const tiles: MangaTile[] = []
             for(let seriesJSON of seriesJSONs) {
                 const json2 = JSON.parse(seriesJSON.data)
+                let latestChapter = (json2.taggings[json2.taggings.length-1] && json2.taggings[json2.taggings.length-1].hasOwnProperty('title')) ? json2.taggings[json2.taggings.length-1].title : ""
                 tiles.push(createMangaTile({
                     id: `series/${json2.permalink}`,
                     title: createIconText({text: json2.name}),
-                    image: json2.cover === undefined || json2.cover === null ? "" : `${WEBSITE_URL}${json2.cover}`
+                    image: json2.cover === undefined || json2.cover === null ? "" : `${WEBSITE_URL}${json2.cover}`,
+                    subtitleText: createIconText({text: latestChapter})
                 }))
             }
             section.items = tiles
@@ -293,10 +312,12 @@ export class DynastyScans extends Source {
             const tiles: MangaTile[] = []
             for(let seriesJSON of seriesJSONs) {
                 const json2 = JSON.parse(seriesJSON.data)
+                let latestChapter = (json2.taggings[json2.taggings.length-1] && json2.taggings[json2.taggings.length-1].hasOwnProperty('title')) ? json2.taggings[json2.taggings.length-1].title : ""
                 tiles.push(createMangaTile({
                     id: `series/${json2.permalink}`,
                     title: createIconText({text: json2.name}),
-                    image: json2.cover === undefined || json2.cover === null ? "" : `${WEBSITE_URL}${json2.cover}`
+                    image: json2.cover === undefined || json2.cover === null ? "" : `${WEBSITE_URL}${json2.cover}`,
+                    subtitleText: createIconText({text: latestChapter})
                 }))
             }
             let newMetadata: object | undefined = lastPageNum === page ? undefined : {page: (page + 1)}
@@ -309,10 +330,45 @@ export class DynastyScans extends Source {
     override getMangaShareUrl(mangaId: string): string {
         return `${WEBSITE_URL}/${mangaId}`
     }
+    override async getSearchTags(): Promise<TagSection[]> {
+        let json: any
+        let page = 1
+        let tagGroups: {key: string, tags: Tag[]}[] = []
+        do {
+            let request = createRequestObject({
+                url: `${WEBSITE_URL}/tags.json?page=${page}`,
+                method: 'GET'
+            })
+            let data = (await this.requestManager.schedule(request, REQUEST_RETRIES)).data
+            json = JSON.parse(data)
+            for(let tagGroup of json.tags) {
+                for(let key of Object.keys(tagGroup)) {
+                    let tags: Tag[] = []
+                    for(let tag of tagGroup[key]) {
+                        tags.push(createTag({
+                            id: tag.permalink,
+                            label: tag.name
+                        }))
+                    }
+                    tagGroups.push({key: key, tags: tags})
+                }
+            }
+            page++
+        } while (page <= json.total_pages)
+        let tagSections: TagSection[] = []
+        for(let tagGroup of tagGroups) {
+            tagSections.push(createTagSection({
+                id: tagGroup.key.toLowerCase(),
+                label: tagGroup.key,
+                tags: tagGroup.tags
+            }))
+        }
+        return tagSections
+    }
 }
 
 export const DynastyScansInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.1.0',
     name: 'Dynasty Scans',
     icon: 'icon.jpg',
     author: 'JimIsWayTooEpic',

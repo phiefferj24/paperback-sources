@@ -2,3 +2,4 @@ bundles/
 coverage/
 node_modules/
 src/tests/
+test.*
