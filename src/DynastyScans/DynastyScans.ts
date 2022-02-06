@@ -154,7 +154,7 @@ export class DynastyScans extends Source {
                 url: `${WEBSITE_URL}/tags/suggest?query=${encodeURIComponent(includedTags[0]!.label)}`,
                 method: 'POST'
             })
-            let data2 = (await this.postRequestManager.schedule(request2, POST_REQUEST_RETRIES).catch((err) => {}))?.data ?? undefined
+            let data2 = (await this.postRequestManager.schedule(request2, POST_REQUEST_RETRIES))?.data ?? undefined
             if(data2 !== undefined) {
                 let json2 = JSON.parse(data2)
                 for(let tag of json2) {
@@ -285,7 +285,7 @@ export class DynastyScans extends Source {
             const json = JSON.parse(data.data)
             var lastPageNum = Number.isNaN(Number(json.total_pages)) ? 1 : Number(json.total_pages)
             const chapters = []
-            const addedSeries: any[] = []
+            const addedSeries: any[] = metadata?.addedSeries ?? []
             for(let chapter of json.chapters) {
                 if(chapter.series !== null && chapter.hasOwnProperty('tags') && !addedSeries.includes(chapter.series)) {
                     chapters.push(chapter)
@@ -320,7 +320,7 @@ export class DynastyScans extends Source {
                     subtitleText: createIconText({text: latestChapter})
                 }))
             }
-            let newMetadata: object | undefined = lastPageNum === page ? undefined : {page: (page + 1)}
+            let newMetadata: object | undefined = lastPageNum === page ? undefined : {page: (page + 1), addedSeries: addedSeries}
             return createPagedResults({
                 results: tiles,
                 metadata: newMetadata
@@ -368,7 +368,7 @@ export class DynastyScans extends Source {
 }
 
 export const DynastyScansInfo: SourceInfo = {
-    version: '1.1.0',
+    version: '1.1.1',
     name: 'Dynasty Scans',
     icon: 'icon.jpg',
     author: 'JimIsWayTooEpic',
