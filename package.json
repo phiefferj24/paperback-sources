@@ -1,11 +1,11 @@
 {
   "name": "extensions-jimiswaytooepic",
   "repositoryName": "JimIsWayTooEpic's Extensions",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "JimIsWayTooEpic's extensions for Paperback",
   "main": "index.js",
   "GITHUB_REPOSITORY": "",
-  "baseURL": "https://jimphieffer.com/paperback/",
+  "baseURL": "https://phiefferj24.github.io/paperback-sources/bundles/",
   "scripts": {
     "bundle": "paperback bundle",
     "serve": "paperback serve",
