@@ -5,7 +5,7 @@
   "description": "JimIsWayTooEpic's extensions for Paperback",
   "main": "index.js",
   "GITHUB_REPOSITORY": "",
-  "baseURL": "https://phiefferj24.github.io/paperback-sources/bundles/",
+  "baseURL": "https://phiefferj24.github.io/paperback-sources/master/",
   "scripts": {
     "bundle": "paperback bundle",
     "serve": "paperback serve",
