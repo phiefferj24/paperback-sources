@@ -175,7 +175,7 @@ export class DynastyScans extends Source {
         let mangas = $("dl.chapter-list dd").toArray()
         let chapterJSONPromises = []
         for(let chapter of mangas) {
-            const permalink = $("a.name", chapter).attr("href").toString().substring(1)
+            const permalink = $("a.name", chapter).attr("href")?.toString().substring(1) ?? ""
             const type = permalink.substring(0, permalink.indexOf("/"))
             if(type !== "series" && type !== "doujins") {
                 continue
