@@ -152,7 +152,7 @@ class DynastyScans extends paperback_extensions_common_1.Source {
         });
     }
     getSearchResults(query, metadata) {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g;
         return __awaiter(this, void 0, void 0, function* () {
             let page = (_a = metadata === null || metadata === void 0 ? void 0 : metadata.page) !== null && _a !== void 0 ? _a : 1;
             let search = encodeURIComponent((_b = query.title) !== null && _b !== void 0 ? _b : " ");
@@ -184,7 +184,7 @@ class DynastyScans extends paperback_extensions_common_1.Source {
             let mangas = $("dl.chapter-list dd").toArray();
             let chapterJSONPromises = [];
             for (let chapter of mangas) {
-                const permalink = $("a.name", chapter).attr("href").toString().substring(1);
+                const permalink = (_g = (_f = $("a.name", chapter).attr("href")) === null || _f === void 0 ? void 0 : _f.toString().substring(1)) !== null && _g !== void 0 ? _g : "";
                 const type = permalink.substring(0, permalink.indexOf("/"));
                 if (type !== "series" && type !== "doujins") {
                     continue;
