@@ -3358,7 +3358,7 @@ exports.DynastyScansInfo = {
     name: 'Dynasty Scans',
     icon: 'icon.jpg',
     author: 'JimIsWayTooEpic',
-    authorWebsite: 'https://phiefferj24.github.io/paperback-sources/bundles/',
+    authorWebsite: 'https://phiefferj24.github.io/paperback-sources/master/',
     description: 'Source for Dynasty Scans. Created by JimIsWayTooEpic.',
     contentRating: paperback_extensions_common_1.ContentRating.ADULT,
     websiteBaseURL: WEBSITE_URL,
